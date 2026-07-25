@@ -7,11 +7,16 @@ interface RosterSectionProps {
   playerIds: string[];
   playerDB: Record<string, SleeperPlayer>;
   salaryMap: Record<string, PlayerSalary>;
+  refMap: Record<string, number>;
+  resigned: Set<string>;
+  onToggleResign: (playerId: string) => void;
+  cut: Set<string>;
+  onToggleCut: (playerId: string) => void;
   slotLabels?: string[];
   sectionSalary?: number;
 }
 
-export function RosterSection({ title, playerIds, playerDB, salaryMap, slotLabels, sectionSalary }: RosterSectionProps) {
+export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, resigned, onToggleResign, cut, onToggleCut, slotLabels, sectionSalary }: RosterSectionProps) {
   if (playerIds.length === 0) return null;
 
   return (
@@ -31,6 +36,11 @@ export function RosterSection({ title, playerIds, playerDB, salaryMap, slotLabel
             playerId={id}
             playerDB={playerDB}
             salaryMap={salaryMap}
+            refValue={refMap[id]}
+            resigned={resigned.has(id)}
+            onToggleResign={() => onToggleResign(id)}
+            isCut={cut.has(id)}
+            onToggleCut={() => onToggleCut(id)}
             slotLabel={slotLabels?.[i]}
           />
         ))}

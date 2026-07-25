@@ -3,6 +3,7 @@ import { useLeagueData } from './hooks/useLeagueData';
 import { usePlayerDB } from './hooks/usePlayerDB';
 import { parseSalaryCSV } from './data/salaryData';
 import { matchSalaries } from './utils/salaryMatch';
+import { buildRefMap } from './data/referenceValues';
 import { Layout } from './components/Layout';
 import { TeamTabs } from './components/TeamTabs';
 import { TeamRoster } from './components/TeamRoster';
@@ -25,6 +26,11 @@ function App() {
     return matchSalaries(salaryEntries, playerDB);
   }, [playerDB]);
 
+  const refMap = useMemo(() => {
+    if (!playerDB) return {};
+    return buildRefMap(playerDB);
+  }, [playerDB]);
+
   const loading = leagueLoading || playersLoading;
   const error = leagueError || playersError;
 
@@ -44,6 +50,7 @@ function App() {
               team={teams[selectedIndex]}
               playerDB={playerDB}
               salaryMap={salaryMap}
+              refMap={refMap}
               rosterPositions={league.roster_positions}
             />
           </div>
