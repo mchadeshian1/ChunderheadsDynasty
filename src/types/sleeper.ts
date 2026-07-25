@@ -56,6 +56,29 @@ export interface SleeperPlayer {
   number: number | null;
 }
 
+export interface SleeperTradedPick {
+  season: string;
+  round: number;
+  roster_id: number;
+  owner_id: number;
+  previous_owner_id: number;
+}
+
+export interface SleeperDraft {
+  draft_id: string;
+  season: string;
+  status: string;
+  draft_order: Record<string, number> | null;
+  settings: Record<string, number>;
+}
+
+export interface DraftPick {
+  round: number;
+  pickInRound: number;
+  originalRosterId: number;
+  salary: number;
+}
+
 export interface EnrichedTeam {
   roster: SleeperRoster;
   user: SleeperUser;

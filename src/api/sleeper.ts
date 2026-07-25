@@ -1,4 +1,4 @@
-import type { SleeperLeague, SleeperUser, SleeperRoster, SleeperPlayer } from '../types/sleeper';
+import type { SleeperLeague, SleeperUser, SleeperRoster, SleeperPlayer, SleeperTradedPick, SleeperDraft } from '../types/sleeper';
 
 const BASE = 'https://api.sleeper.app/v1';
 export const LEAGUE_ID = '1353095041182072832';
@@ -24,5 +24,17 @@ export async function fetchRosters(): Promise<SleeperRoster[]> {
 export async function fetchPlayerDB(): Promise<Record<string, SleeperPlayer>> {
   const res = await fetch(`${BASE}/players/nfl`);
   if (!res.ok) throw new Error(`Failed to fetch player database: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchTradedPicks(): Promise<SleeperTradedPick[]> {
+  const res = await fetch(`${BASE}/league/${LEAGUE_ID}/traded_picks`);
+  if (!res.ok) throw new Error(`Failed to fetch traded picks: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchDrafts(): Promise<SleeperDraft[]> {
+  const res = await fetch(`${BASE}/league/${LEAGUE_ID}/drafts`);
+  if (!res.ok) throw new Error(`Failed to fetch drafts: ${res.status}`);
   return res.json();
 }
