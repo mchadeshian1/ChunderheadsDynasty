@@ -41,6 +41,7 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
 
   const posColor = POSITION_COLORS[player.position] ?? 'bg-gray-500/20 text-gray-400';
   const displayRef = refValue ?? 1;
+  const resignPrice = Math.max(1, Math.floor(displayRef * 0.9));
   const isUnderContract = salary != null && salary.contractYears > 0;
   const isExpired = salary != null && salary.contractYears === 0;
 
@@ -67,6 +68,8 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
         <span className="flex w-20 shrink-0 items-center justify-end gap-1">
           {isCut ? (
             <span className="text-sm font-semibold text-red-400">${Math.floor(salary.salary / 2)}</span>
+          ) : resigned ? (
+            <span className="text-sm font-semibold text-emerald-400">${resignPrice}</span>
           ) : (
             <span className="text-sm font-semibold text-emerald-400">${salary.salary}</span>
           )}

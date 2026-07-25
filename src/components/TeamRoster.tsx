@@ -32,7 +32,7 @@ function sumCommitted(
       if (cut.has(id)) return sum + Math.floor(s.salary / 2);
       return sum + s.salary;
     }
-    if (resigned.has(id)) return sum + (refMap[id] ?? 1);
+    if (resigned.has(id)) return sum + Math.max(1, Math.floor((refMap[id] ?? 1) * 0.9));
     return sum;
   }, 0);
 }
