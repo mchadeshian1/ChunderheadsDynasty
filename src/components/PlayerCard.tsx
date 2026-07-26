@@ -19,10 +19,12 @@ interface PlayerCardProps {
   onToggleResign: () => void;
   isCut: boolean;
   onToggleCut: () => void;
+  isAmnesty: boolean;
+  onToggleAmnesty: () => void;
   slotLabel?: string;
 }
 
-export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, onToggleResign, isCut, onToggleCut, slotLabel }: PlayerCardProps) {
+export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, onToggleResign, isCut, onToggleCut, isAmnesty, onToggleAmnesty, slotLabel }: PlayerCardProps) {
   const player = playerDB[playerId];
   const salary = salaryMap[playerId];
 
@@ -45,72 +47,109 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
   const isUnderContract = salary != null && salary.contractYears > 0;
   const isExpired = salary != null && salary.contractYears === 0;
 
+  const salaryDisplay = salary ? (
+    <span className="flex shrink-0 items-center gap-1">
+      {isAmnesty ? (
+        <span className="text-sm font-semibold text-orange-400">$0</span>
+      ) : isCut ? (
+        <span className="text-sm font-semibold text-red-400">${Math.floor(salary.salary / 2)}</span>
+      ) : resigned ? (
+        <span className="text-sm font-semibold text-emerald-400">${resignPrice}</span>
+      ) : (
+        <span className="text-sm font-semibold text-emerald-400">${salary.salary}</span>
+      )}
+      <span className="text-right text-xs text-gray-500">{salary.contractYears}yr</span>
+    </span>
+  ) : (
+    <span className="shrink-0 rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs font-semibold text-yellow-400">
+      No salary
+    </span>
+  );
+
+  const checkboxes = isUnderContract ? (
+    <div className="flex shrink-0 items-center gap-2">
+      <label className="flex cursor-pointer items-center gap-1">
+        <input
+          type="checkbox"
+          checked={isCut}
+          onChange={onToggleCut}
+          className="h-3.5 w-3.5 accent-red-500"
+        />
+        <span className={`text-xs whitespace-nowrap ${isCut ? 'text-red-400' : 'text-gray-500'}`}>Cut</span>
+      </label>
+      <label className="flex cursor-pointer items-center gap-1">
+        <input
+          type="checkbox"
+          checked={isAmnesty}
+          onChange={onToggleAmnesty}
+          className="h-3.5 w-3.5 accent-orange-500"
+        />
+        <span className={`text-xs whitespace-nowrap ${isAmnesty ? 'text-orange-400' : 'text-gray-500'}`}>Amnesty</span>
+      </label>
+    </div>
+  ) : isExpired ? (
+    <div className="flex shrink-0 items-center gap-2">
+      <label className="flex cursor-pointer items-center gap-1">
+        <input
+          type="checkbox"
+          checked={resigned}
+          onChange={onToggleResign}
+          className="h-3.5 w-3.5 accent-emerald-500"
+        />
+        <span className={`text-xs whitespace-nowrap ${resigned ? 'text-emerald-400' : 'text-gray-500'}`}>Re-sign</span>
+      </label>
+    </div>
+  ) : null;
+
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-gray-800/50 px-3 py-2">
-      {slotLabel && (
-        <span className="w-14 shrink-0 text-center text-xs font-semibold text-gray-500">
-          {slotLabel}
+    <div className="rounded-lg bg-gray-800/50 px-3 py-2">
+      {/* Desktop: single row */}
+      <div className="hidden sm:flex items-center gap-2">
+        {slotLabel && (
+          <span className="w-14 shrink-0 text-center text-xs font-semibold text-gray-500">
+            {slotLabel}
+          </span>
+        )}
+        <span className={`inline-flex w-10 shrink-0 items-center justify-center rounded px-1.5 py-0.5 text-xs font-bold ${posColor}`}>
+          {player.position}
         </span>
-      )}
-      <span className={`inline-flex w-10 shrink-0 items-center justify-center rounded px-1.5 py-0.5 text-xs font-bold ${posColor}`}>
-        {player.position}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-100">
-        {player.full_name ?? `${player.first_name} ${player.last_name}`}
-      </span>
-      <span className="w-8 shrink-0 text-right text-xs text-gray-500">
-        {player.team ?? 'FA'}
-      </span>
-      <span className="w-12 shrink-0 text-right text-xs text-gray-500">
-        ref ${displayRef}
-      </span>
-      {salary ? (
-        <span className="flex w-20 shrink-0 items-center justify-end gap-1">
-          {isCut ? (
-            <span className="text-sm font-semibold text-red-400">${Math.floor(salary.salary / 2)}</span>
-          ) : resigned ? (
-            <span className="text-sm font-semibold text-emerald-400">${resignPrice}</span>
-          ) : (
-            <span className="text-sm font-semibold text-emerald-400">${salary.salary}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-100">
+          {player.full_name ?? `${player.first_name} ${player.last_name}`}
+        </span>
+        <span className="w-8 shrink-0 text-right text-xs text-gray-500">
+          {player.team ?? 'FA'}
+        </span>
+        <span className="w-12 shrink-0 text-right text-xs text-gray-500">
+          ref ${displayRef}
+        </span>
+        <span className="w-20 shrink-0 flex justify-end">{salaryDisplay}</span>
+        <span className="w-40 shrink-0 flex justify-end">{checkboxes}</span>
+      </div>
+      {/* Mobile: two rows */}
+      <div className="sm:hidden space-y-1.5">
+        <div className="flex items-center gap-2">
+          {slotLabel && (
+            <span className="w-10 shrink-0 text-center text-xs font-semibold text-gray-500">
+              {slotLabel}
+            </span>
           )}
-          <span className="w-6 text-right text-xs text-gray-500">{salary.contractYears}yr</span>
-        </span>
-      ) : (
-        <span className="w-20 shrink-0 text-right rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs font-semibold text-yellow-400">
-          No salary
-        </span>
-      )}
-      {isUnderContract ? (
-        <div className="flex w-28 shrink-0 items-center justify-end gap-2">
-          <label className="flex cursor-pointer items-center gap-1">
-            <input
-              type="checkbox"
-              checked={isCut}
-              onChange={onToggleCut}
-              className="h-3.5 w-3.5 accent-red-500"
-            />
-            <span className={`text-xs ${isCut ? 'text-red-400' : 'text-gray-500'}`}>Cut</span>
-          </label>
-          <label className="flex items-center gap-1 opacity-40">
-            <input type="checkbox" checked disabled className="h-3.5 w-3.5 accent-gray-600" />
-            <span className="text-xs text-gray-600">Re-sign</span>
-          </label>
+          <span className={`inline-flex w-9 shrink-0 items-center justify-center rounded px-1 py-0.5 text-xs font-bold ${posColor}`}>
+            {player.position}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-100">
+            {player.full_name ?? `${player.first_name} ${player.last_name}`}
+          </span>
+          <span className="shrink-0 text-xs text-gray-500">
+            {player.team ?? 'FA'}
+          </span>
         </div>
-      ) : isExpired ? (
-        <div className="flex w-28 shrink-0 items-center justify-end gap-2">
-          <label className="flex cursor-pointer items-center gap-1">
-            <input
-              type="checkbox"
-              checked={resigned}
-              onChange={onToggleResign}
-              className="h-3.5 w-3.5 accent-emerald-500"
-            />
-            <span className={`text-xs ${resigned ? 'text-emerald-400' : 'text-gray-500'}`}>Re-sign</span>
-          </label>
+        <div className="flex items-center justify-between gap-2 pl-2">
+          <span className="text-xs text-gray-500">ref ${displayRef}</span>
+          {salaryDisplay}
+          <div className="flex-1" />
+          {checkboxes}
         </div>
-      ) : (
-        <span className="w-28 shrink-0" />
-      )}
+      </div>
     </div>
   );
 }

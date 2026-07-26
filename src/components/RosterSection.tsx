@@ -12,11 +12,13 @@ interface RosterSectionProps {
   onToggleResign: (playerId: string) => void;
   cut: Set<string>;
   onToggleCut: (playerId: string) => void;
+  amnesty: string | null;
+  onToggleAmnesty: (playerId: string) => void;
   slotLabels?: string[];
   sectionSalary?: number;
 }
 
-export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, resigned, onToggleResign, cut, onToggleCut, slotLabels, sectionSalary }: RosterSectionProps) {
+export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, resigned, onToggleResign, cut, onToggleCut, amnesty, onToggleAmnesty, slotLabels, sectionSalary }: RosterSectionProps) {
   if (playerIds.length === 0) return null;
 
   return (
@@ -41,6 +43,8 @@ export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, r
             onToggleResign={() => onToggleResign(id)}
             isCut={cut.has(id)}
             onToggleCut={() => onToggleCut(id)}
+            isAmnesty={amnesty === id}
+            onToggleAmnesty={() => onToggleAmnesty(id)}
             slotLabel={slotLabels?.[i]}
           />
         ))}

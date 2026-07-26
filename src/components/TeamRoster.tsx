@@ -24,11 +24,13 @@ function sumCommitted(
   refMap: Record<string, number>,
   resigned: Set<string>,
   cut: Set<string>,
+  amnesty: string | null,
 ): number {
   return ids.reduce((sum, id) => {
     const s = salaryMap[id];
     if (!s) return sum;
     if (s.contractYears > 0) {
+      if (id === amnesty) return sum;
       if (cut.has(id)) return sum + Math.floor(s.salary / 2);
       return sum + s.salary;
     }
@@ -41,6 +43,7 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
   const { roster, user } = team;
   const [resigned, setResigned] = useState<Set<string>>(new Set());
   const [cut, setCut] = useState<Set<string>>(new Set());
+  const [amnesty, setAmnesty] = useState<string | null>(null);
 
   const starters = roster.starters ?? [];
   const reserve = roster.reserve ?? [];
@@ -53,7 +56,7 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
   const slotLabels = getStarterSlotLabels(rosterPositions);
   const draftCapHit = draftPicks.reduce((sum, p) => sum + p.salary, 0);
   const totalSalary = sumSalary(allPlayers, salaryMap) + draftCapHit;
-  const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut) + draftCapHit;
+  const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty) + draftCapHit;
 
   const toggleResign = (playerId: string) => {
     setResigned(prev => {
@@ -65,10 +68,21 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
   };
 
   const toggleCut = (playerId: string) => {
+    if (amnesty === playerId) setAmnesty(null);
     setCut(prev => {
       const next = new Set(prev);
       if (next.has(playerId)) next.delete(playerId);
       else next.add(playerId);
+      return next;
+    });
+  };
+
+  const toggleAmnesty = (playerId: string) => {
+    setAmnesty(prev => prev === playerId ? null : playerId);
+    setCut(prev => {
+      if (!prev.has(playerId)) return prev;
+      const next = new Set(prev);
+      next.delete(playerId);
       return next;
     });
   };
@@ -98,6 +112,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         onToggleResign={toggleResign}
         cut={cut}
         onToggleCut={toggleCut}
+        amnesty={amnesty}
+        onToggleAmnesty={toggleAmnesty}
         slotLabels={slotLabels}
         sectionSalary={sumSalary(starters, salaryMap)}
       />
@@ -111,6 +127,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         onToggleResign={toggleResign}
         cut={cut}
         onToggleCut={toggleCut}
+        amnesty={amnesty}
+        onToggleAmnesty={toggleAmnesty}
         sectionSalary={sumSalary(bench, salaryMap)}
       />
       <RosterSection
@@ -123,6 +141,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         onToggleResign={toggleResign}
         cut={cut}
         onToggleCut={toggleCut}
+        amnesty={amnesty}
+        onToggleAmnesty={toggleAmnesty}
         sectionSalary={sumSalary(reserve, salaryMap)}
       />
       {draftPicks.length > 0 && (
