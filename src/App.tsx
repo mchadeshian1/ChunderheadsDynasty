@@ -31,6 +31,11 @@ function App() {
     return buildRefMap(playerDB);
   }, [playerDB]);
 
+  const hasMissingSalaries = useMemo(() => {
+    if (!teams.length) return false;
+    return teams.some(t => (t.roster.players ?? []).some(pid => !salaryMap[pid]));
+  }, [teams, salaryMap]);
+
   const loading = leagueLoading || playersLoading;
   const error = leagueError || playersError;
 
@@ -55,17 +60,19 @@ function App() {
               rosterPositions={league.roster_positions}
             />
           </div>
-          <div className="border-t border-gray-800 px-4 py-4">
-            <button
-              onClick={() => setShowMissing(!showMissing)}
-              className="text-sm font-medium text-yellow-400 hover:text-yellow-300"
-            >
-              {showMissing ? 'Hide' : 'Show'} rostered players without salary
-            </button>
-            {showMissing && (
-              <MissingSalaries teams={teams} playerDB={playerDB} salaryMap={salaryMap} />
-            )}
-          </div>
+          {hasMissingSalaries && (
+            <div className="border-t border-gray-800 px-4 py-4">
+              <button
+                onClick={() => setShowMissing(!showMissing)}
+                className="text-sm font-medium text-yellow-400 hover:text-yellow-300"
+              >
+                {showMissing ? 'Hide' : 'Show'} rostered players without salary
+              </button>
+              {showMissing && (
+                <MissingSalaries teams={teams} playerDB={playerDB} salaryMap={salaryMap} />
+              )}
+            </div>
+          )}
           {lastUpdated && (
             <div className="border-t border-gray-800 px-4 py-2 text-right text-xs text-gray-600">
               Last updated: {lastUpdated.toLocaleTimeString()}

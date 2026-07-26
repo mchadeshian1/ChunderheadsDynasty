@@ -31,10 +31,13 @@ function sumCommitted(
     if (!s) return sum;
     if (s.contractYears > 0) {
       if (id === amnesty) return sum;
-      if (cut.has(id)) return sum + Math.floor(s.salary / 2);
+      if (cut.has(id)) {
+        if (s.contractYears > 1) return sum + Math.ceil(s.salary / s.contractYears);
+        return sum + Math.floor(s.salary / 2);
+      }
       return sum + s.salary;
     }
-    if (resigned.has(id)) return sum + Math.max(1, Math.floor((refMap[id] ?? 1) * 0.9));
+    if (resigned.has(id)) return sum + Math.max(1, Math.round((refMap[id] ?? 1) * 0.9));
     return sum;
   }, 0);
 }

@@ -43,16 +43,26 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
 
   const posColor = POSITION_COLORS[player.position] ?? 'bg-gray-500/20 text-gray-400';
   const displayRef = refValue ?? 1;
-  const resignPrice = Math.max(1, Math.floor(displayRef * 0.9));
+  const resignPrice = Math.max(1, Math.round(displayRef * 0.9));
   const isUnderContract = salary != null && salary.contractYears > 0;
   const isExpired = salary != null && salary.contractYears === 0;
+
+  const deadCapSpread = (isCut && salary && salary.contractYears > 1) ? (() => {
+    const perYear = Math.floor(salary.salary / salary.contractYears);
+    const remainder = salary.salary % salary.contractYears;
+    return Array.from({ length: salary.contractYears }, (_, i) =>
+      perYear + (i < remainder ? 1 : 0)
+    );
+  })() : null;
 
   const salaryDisplay = salary ? (
     <span className="flex shrink-0 items-center gap-1">
       {isAmnesty ? (
         <span className="text-sm font-semibold text-orange-400">$0</span>
       ) : isCut ? (
-        <span className="text-sm font-semibold text-red-400">${Math.floor(salary.salary / 2)}</span>
+        <span className="text-sm font-semibold text-red-400">
+          ${deadCapSpread ? deadCapSpread[0] : Math.floor(salary.salary / 2)}
+        </span>
       ) : resigned ? (
         <span className="text-sm font-semibold text-emerald-400">${resignPrice}</span>
       ) : (
@@ -125,6 +135,14 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
         <span className="w-20 shrink-0 flex justify-end">{salaryDisplay}</span>
         <span className="w-40 shrink-0 flex justify-end">{checkboxes}</span>
       </div>
+      {/* Desktop: future dead cap */}
+      {deadCapSpread && (
+        <div className="hidden sm:flex justify-end mt-1 pr-1">
+          <span className="text-xs text-red-400/70">
+            Dead cap: {deadCapSpread.map((v, i) => `Y${i + 1}: $${v}`).join(', ')}
+          </span>
+        </div>
+      )}
       {/* Mobile: two rows */}
       <div className="sm:hidden space-y-1.5">
         <div className="flex items-center gap-2">
@@ -149,6 +167,13 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
           <div className="flex-1" />
           {checkboxes}
         </div>
+        {deadCapSpread && (
+          <div className="pl-2">
+            <span className="text-xs text-red-400/70">
+              Dead cap: {deadCapSpread.map((v, i) => `Y${i + 1}: $${v}`).join(', ')}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
