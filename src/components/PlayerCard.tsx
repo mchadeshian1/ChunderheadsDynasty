@@ -1,5 +1,7 @@
 import type { SleeperPlayer } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
+import type { Mode } from './Layout';
+import type { PlayerIRCredit } from '../utils/irCredit';
 
 const POSITION_COLORS: Record<string, string> = {
   QB: 'bg-red-500/20 text-red-400',
@@ -22,9 +24,11 @@ interface PlayerCardProps {
   isAmnesty: boolean;
   onToggleAmnesty: () => void;
   slotLabel?: string;
+  mode: Mode;
+  irCredit?: PlayerIRCredit;
 }
 
-export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, onToggleResign, isCut, onToggleCut, isAmnesty, onToggleAmnesty, slotLabel }: PlayerCardProps) {
+export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, onToggleResign, isCut, onToggleCut, isAmnesty, onToggleAmnesty, slotLabel, mode, irCredit }: PlayerCardProps) {
   const player = playerDB[playerId];
   const salary = salaryMap[playerId];
 
@@ -87,17 +91,19 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
         />
         <span className={`text-xs whitespace-nowrap ${isCut ? 'text-red-400' : 'text-gray-500'}`}>Cut</span>
       </label>
-      <label className="flex cursor-pointer items-center gap-1">
-        <input
-          type="checkbox"
-          checked={isAmnesty}
-          onChange={onToggleAmnesty}
-          className="h-3.5 w-3.5 accent-orange-500"
-        />
-        <span className={`text-xs whitespace-nowrap ${isAmnesty ? 'text-orange-400' : 'text-gray-500'}`}>Amnesty</span>
-      </label>
+      {mode === 'offseason' && (
+        <label className="flex cursor-pointer items-center gap-1">
+          <input
+            type="checkbox"
+            checked={isAmnesty}
+            onChange={onToggleAmnesty}
+            className="h-3.5 w-3.5 accent-orange-500"
+          />
+          <span className={`text-xs whitespace-nowrap ${isAmnesty ? 'text-orange-400' : 'text-gray-500'}`}>Amnesty</span>
+        </label>
+      )}
     </div>
-  ) : isExpired ? (
+  ) : isExpired && mode === 'offseason' ? (
     <div className="flex shrink-0 items-center gap-2">
       <label className="flex cursor-pointer items-center gap-1">
         <input
@@ -109,6 +115,12 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
         <span className={`text-xs whitespace-nowrap ${resigned ? 'text-emerald-400' : 'text-gray-500'}`}>Re-sign</span>
       </label>
     </div>
+  ) : null;
+
+  const irCreditDisplay = irCredit && mode === 'inseason' ? (
+    <span className="text-xs font-semibold text-cyan-400">
+      IR: -${irCredit.credit} ({irCredit.weeks}wk)
+    </span>
   ) : null;
 
   return (
@@ -133,6 +145,7 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
           ref ${displayRef}
         </span>
         <span className="w-20 shrink-0 flex justify-end">{salaryDisplay}</span>
+        {irCreditDisplay && <span className="w-28 shrink-0 flex justify-end">{irCreditDisplay}</span>}
         <span className="w-40 shrink-0 flex justify-end">{checkboxes}</span>
       </div>
       {/* Desktop: future dead cap */}
@@ -164,6 +177,7 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
         <div className="flex items-center justify-between gap-2 pl-2">
           <span className="text-xs text-gray-500">ref ${displayRef}</span>
           {salaryDisplay}
+          {irCreditDisplay}
           <div className="flex-1" />
           {checkboxes}
         </div>

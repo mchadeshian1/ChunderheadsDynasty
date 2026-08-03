@@ -1,5 +1,7 @@
 import type { SleeperPlayer } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
+import type { Mode } from './Layout';
+import type { TeamIRCredits } from '../utils/irCredit';
 import { PlayerCard } from './PlayerCard';
 
 interface RosterSectionProps {
@@ -16,10 +18,14 @@ interface RosterSectionProps {
   onToggleAmnesty: (playerId: string) => void;
   slotLabels?: string[];
   sectionSalary?: number;
+  mode: Mode;
+  irCredits?: TeamIRCredits;
 }
 
-export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, resigned, onToggleResign, cut, onToggleCut, amnesty, onToggleAmnesty, slotLabels, sectionSalary }: RosterSectionProps) {
+export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, resigned, onToggleResign, cut, onToggleCut, amnesty, onToggleAmnesty, slotLabels, sectionSalary, mode, irCredits }: RosterSectionProps) {
   if (playerIds.length === 0) return null;
+
+  const irCreditMap = new Map(irCredits?.players.map(p => [p.playerId, p]) ?? []);
 
   return (
     <div className="space-y-1">
@@ -46,6 +52,8 @@ export function RosterSection({ title, playerIds, playerDB, salaryMap, refMap, r
             isAmnesty={amnesty === id}
             onToggleAmnesty={() => onToggleAmnesty(id)}
             slotLabel={slotLabels?.[i]}
+            mode={mode}
+            irCredit={irCreditMap.get(id)}
           />
         ))}
       </div>

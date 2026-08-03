@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { SleeperPlayer, EnrichedTeam, DraftPick } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
+import type { Mode } from './Layout';
+import type { TeamIRCredits } from '../utils/irCredit';
 import { getStarterSlotLabels } from '../utils/rosterSlots';
 import { TeamHeader } from './TeamHeader';
 import { RosterSection } from './RosterSection';
@@ -12,6 +14,8 @@ interface TeamRosterProps {
   refMap: Record<string, number>;
   draftPicks: DraftPick[];
   rosterPositions: string[];
+  mode: Mode;
+  irCredits?: TeamIRCredits;
 }
 
 function sumSalary(ids: string[], salaryMap: Record<string, PlayerSalary>): number {
@@ -42,7 +46,7 @@ function sumCommitted(
   }, 0);
 }
 
-export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rosterPositions }: TeamRosterProps) {
+export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rosterPositions, mode, irCredits }: TeamRosterProps) {
   const { roster, user } = team;
   const [resigned, setResigned] = useState<Set<string>>(new Set());
   const [cut, setCut] = useState<Set<string>>(new Set());
@@ -60,6 +64,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
   const draftCapHit = draftPicks.reduce((sum, p) => sum + p.salary, 0);
   const totalSalary = sumSalary(allPlayers, salaryMap) + draftCapHit;
   const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty) + draftCapHit;
+  const irCreditTotal = irCredits?.total ?? 0;
+  const effectiveCap = committedSalary - irCreditTotal;
 
   const toggleResign = (playerId: string) => {
     setResigned(prev => {
@@ -100,9 +106,15 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
             <p className="text-xs text-gray-500">Total Salary</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-blue-400">${committedSalary}</p>
-            <p className="text-xs text-gray-500">Committed Salary</p>
+            <p className="text-2xl font-bold text-blue-400">${mode === 'inseason' && irCreditTotal > 0 ? effectiveCap : committedSalary}</p>
+            <p className="text-xs text-gray-500">{mode === 'inseason' ? 'Effective Cap' : 'Committed Salary'}</p>
           </div>
+          {mode === 'inseason' && irCreditTotal > 0 && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-cyan-400">-${irCreditTotal}</p>
+              <p className="text-xs text-gray-500">IR Credit</p>
+            </div>
+          )}
         </div>
       </div>
       <RosterSection
@@ -119,6 +131,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         onToggleAmnesty={toggleAmnesty}
         slotLabels={slotLabels}
         sectionSalary={sumSalary(starters, salaryMap)}
+        mode={mode}
+        irCredits={irCredits}
       />
       <RosterSection
         title="Bench"
@@ -133,6 +147,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         amnesty={amnesty}
         onToggleAmnesty={toggleAmnesty}
         sectionSalary={sumSalary(bench, salaryMap)}
+        mode={mode}
+        irCredits={irCredits}
       />
       <RosterSection
         title="IR"
@@ -147,6 +163,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         amnesty={amnesty}
         onToggleAmnesty={toggleAmnesty}
         sectionSalary={sumSalary(reserve, salaryMap)}
+        mode={mode}
+        irCredits={irCredits}
       />
       {draftPicks.length > 0 && (
         <div className="space-y-1">
