@@ -3,6 +3,7 @@ import type { SleeperPlayer, EnrichedTeam, DraftPick } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
 import type { Mode } from './Layout';
 import type { TeamIRCredits } from '../utils/irCredit';
+import type { TeamDeadCap } from '../utils/deadCap';
 import { getStarterSlotLabels } from '../utils/rosterSlots';
 import { TeamHeader } from './TeamHeader';
 import { RosterSection } from './RosterSection';
@@ -16,6 +17,7 @@ interface TeamRosterProps {
   rosterPositions: string[];
   mode: Mode;
   irCredits?: TeamIRCredits;
+  deadCap?: TeamDeadCap;
 }
 
 function sumSalary(ids: string[], salaryMap: Record<string, PlayerSalary>): number {
@@ -46,7 +48,7 @@ function sumCommitted(
   }, 0);
 }
 
-export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rosterPositions, mode, irCredits }: TeamRosterProps) {
+export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rosterPositions, mode, irCredits, deadCap }: TeamRosterProps) {
   const { roster, user } = team;
   const [resigned, setResigned] = useState<Set<string>>(new Set());
   const [cut, setCut] = useState<Set<string>>(new Set());
@@ -63,7 +65,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
   const slotLabels = getStarterSlotLabels(rosterPositions);
   const draftCapHit = draftPicks.reduce((sum, p) => sum + p.salary, 0);
   const totalSalary = sumSalary(allPlayers, salaryMap) + draftCapHit;
-  const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty) + draftCapHit;
+  const deadCapTotal = deadCap?.total ?? 0;
+  const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty) + draftCapHit + deadCapTotal;
   const irCreditTotal = irCredits?.total ?? 0;
   const effectiveCap = committedSalary - irCreditTotal;
 
@@ -109,6 +112,12 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
             <p className="text-2xl font-bold text-blue-400">${mode === 'inseason' && irCreditTotal > 0 ? effectiveCap : committedSalary}</p>
             <p className="text-xs text-gray-500">{mode === 'inseason' ? 'Effective Cap' : 'Committed Salary'}</p>
           </div>
+          {mode === 'inseason' && deadCapTotal > 0 && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-red-400">+${deadCapTotal}</p>
+              <p className="text-xs text-gray-500">Dead Cap</p>
+            </div>
+          )}
           {mode === 'inseason' && irCreditTotal > 0 && (
             <div className="text-right">
               <p className="text-2xl font-bold text-cyan-400">-${irCreditTotal}</p>
@@ -166,6 +175,53 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         mode={mode}
         irCredits={irCredits}
       />
+      {mode === 'inseason' && deadCap && deadCap.entries.length > 0 && (
+        <div className="space-y-1">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Pre-Season Dead Cap ({deadCap.entries.length})
+            </h3>
+            <span className="text-xs font-semibold text-red-400">${deadCapTotal}</span>
+          </div>
+          <div className="space-y-1">
+            {deadCap.entries.map(entry => {
+              const player = playerDB[entry.playerId];
+              const name = player
+                ? (player.full_name ?? `${player.first_name} ${player.last_name}`)
+                : entry.playerId;
+              return (
+                <div
+                  key={entry.playerId}
+                  className="flex items-center gap-2 rounded-lg bg-gray-800/50 px-3 py-2"
+                >
+                  {player && (
+                    <span className={`inline-flex w-10 shrink-0 items-center justify-center rounded px-1.5 py-0.5 text-xs font-bold ${
+                      player.position === 'QB' ? 'bg-red-500/20 text-red-400' :
+                      player.position === 'RB' ? 'bg-emerald-500/20 text-emerald-400' :
+                      player.position === 'WR' ? 'bg-blue-500/20 text-blue-400' :
+                      player.position === 'TE' ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {player.position}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-100">
+                    {name}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    ${entry.salary} / {entry.contractYears}yr
+                  </span>
+                  {entry.isAmnesty ? (
+                    <span className="text-sm font-semibold text-orange-400">$0 amnesty</span>
+                  ) : (
+                    <span className="text-sm font-semibold text-red-400">${entry.deadCap}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {draftPicks.length > 0 && (
         <div className="space-y-1">
           <div className="mb-2 flex items-center justify-between">

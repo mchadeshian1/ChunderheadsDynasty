@@ -7,6 +7,7 @@ import { matchSalaries } from './utils/salaryMatch';
 import { buildRefMap } from './data/referenceValues';
 import { getWaiverOverrides } from './utils/transactions';
 import { computeIRCredits } from './utils/irCredit';
+import { getPreSeasonDeadCap } from './utils/deadCap';
 import { Layout } from './components/Layout';
 import type { Mode } from './components/Layout';
 import { TeamTabs } from './components/TeamTabs';
@@ -55,6 +56,11 @@ function App() {
     return computeIRCredits(transactions, teams.map(t => t.roster), playerDB, effectiveSalaryMap, currentWeek);
   }, [mode, transactions, teams, playerDB, effectiveSalaryMap, currentWeek]);
 
+  const preSeasonDeadCap = useMemo(() => {
+    if (mode !== 'inseason' || !transactions.length || !teams.length) return {};
+    return getPreSeasonDeadCap(transactions, teams.map(t => t.roster), salaryMap);
+  }, [mode, transactions, teams, salaryMap]);
+
   const activeSalaryMap = effectiveSalaryMap;
 
   const hasMissingSalaries = useMemo(() => {
@@ -86,6 +92,7 @@ function App() {
               rosterPositions={league.roster_positions}
               mode={mode}
               irCredits={irCredits[teams[selectedIndex].roster.roster_id]}
+              deadCap={preSeasonDeadCap[teams[selectedIndex].roster.roster_id]}
             />
           </div>
           {hasMissingSalaries && (
