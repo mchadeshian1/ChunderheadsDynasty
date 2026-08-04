@@ -76,6 +76,8 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
   const draftCapHit = draftPicks.reduce((sum, p) => sum + p.salary, 0);
   const totalSalary = sumSalary(allPlayers, salaryMap, refMap, mode) + draftCapHit;
   const deadCapTotal = deadCap?.total ?? 0;
+  // The amnestied cut costs nothing, so it is left out of the listing.
+  const chargedDeadCap = deadCap?.entries.filter(e => !e.isAmnesty) ?? [];
   const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty, mode) + draftCapHit + deadCapTotal;
   const irCreditTotal = irCredits?.total ?? 0;
   const effectiveCap = committedSalary - irCreditTotal;
@@ -189,16 +191,16 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         mode={mode}
         irCredits={irCredits}
       />
-      {mode === 'inseason' && deadCap && deadCap.entries.length > 0 && (
+      {mode === 'inseason' && chargedDeadCap.length > 0 && (
         <div className="space-y-1">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Pre-Season Dead Cap ({deadCap.entries.length})
+              Dead Cap ({chargedDeadCap.length})
             </h3>
             <span className="text-xs font-semibold text-red-400">${deadCapTotal}</span>
           </div>
           <div className="space-y-1">
-            {deadCap.entries.map(entry => {
+            {chargedDeadCap.map(entry => {
               const player = playerDB[entry.playerId];
               const name = player
                 ? (player.full_name ?? `${player.first_name} ${player.last_name}`)
@@ -225,11 +227,7 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
                   <span className="text-xs text-gray-500">
                     ${entry.salary} / {entry.contractYears}yr
                   </span>
-                  {entry.isAmnesty ? (
-                    <span className="text-sm font-semibold text-orange-400">$0 amnesty</span>
-                  ) : (
-                    <span className="text-sm font-semibold text-red-400">${entry.deadCap}</span>
-                  )}
+                  <span className="text-sm font-semibold text-red-400">${entry.deadCap}</span>
                 </div>
               );
             })}
