@@ -70,7 +70,7 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
       ) : resigned ? (
         <span className="text-sm font-semibold text-emerald-400">${resignPrice}</span>
       ) : (
-        <span className="text-sm font-semibold text-emerald-400">${salary.salary}</span>
+        <span className="text-sm font-semibold text-emerald-400">${isExpired ? displayRef : salary.salary}</span>
       )}
       <span className="text-right text-xs text-gray-500">{salary.contractYears}yr</span>
     </span>
