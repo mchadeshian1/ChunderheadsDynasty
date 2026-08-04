@@ -1,6 +1,8 @@
 import type { SleeperTransaction } from '../types/transaction';
 import type { SleeperRoster } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
+import { isRetired } from '../data/retiredPlayers';
+import { getDeadCapHit } from './contract';
 
 export interface DeadCapEntry {
   playerId: string;
@@ -13,11 +15,6 @@ export interface DeadCapEntry {
 export interface TeamDeadCap {
   total: number;
   entries: DeadCapEntry[];
-}
-
-function computeDeadCapHit(salary: number, contractYears: number): number {
-  if (contractYears > 1) return Math.ceil(salary / contractYears);
-  return Math.floor(salary / 2);
 }
 
 export function getPreSeasonDeadCap(
@@ -40,10 +37,13 @@ export function getPreSeasonDeadCap(
     for (const [playerId, rosterId] of Object.entries(txn.drops)) {
       if (rosterPlayers[rosterId]?.has(playerId)) continue;
 
+      // A retired player's contract is voided, so no dead cap follows him.
+      if (isRetired(playerId)) continue;
+
       const salary = salaryMap[playerId];
       if (!salary || salary.contractYears <= 0 || salary.salary <= 0) continue;
 
-      const dc = computeDeadCapHit(salary.salary, salary.contractYears);
+      const dc = getDeadCapHit(salary.salary, salary.contractYears);
       if (dc <= 0) continue;
 
       if (!cutsByRoster[rosterId]) cutsByRoster[rosterId] = [];

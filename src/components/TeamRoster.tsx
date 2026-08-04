@@ -5,6 +5,7 @@ import type { Mode } from './Layout';
 import type { TeamIRCredits } from '../utils/irCredit';
 import type { TeamDeadCap } from '../utils/deadCap';
 import { getStarterSlotLabels } from '../utils/rosterSlots';
+import { getEffectiveContract, getResignPrice, getDeadCapHit } from '../utils/contract';
 import { TeamHeader } from './TeamHeader';
 import { RosterSection } from './RosterSection';
 
@@ -20,8 +21,17 @@ interface TeamRosterProps {
   deadCap?: TeamDeadCap;
 }
 
-function sumSalary(ids: string[], salaryMap: Record<string, PlayerSalary>): number {
-  return ids.reduce((sum, id) => sum + (salaryMap[id]?.salary ?? 0), 0);
+function sumSalary(
+  ids: string[],
+  salaryMap: Record<string, PlayerSalary>,
+  refMap: Record<string, number>,
+  mode: Mode,
+): number {
+  return ids.reduce((sum, id) => {
+    const s = salaryMap[id];
+    if (!s) return sum;
+    return sum + getEffectiveContract(s, refMap[id], mode).salary;
+  }, 0);
 }
 
 function sumCommitted(
@@ -31,19 +41,19 @@ function sumCommitted(
   resigned: Set<string>,
   cut: Set<string>,
   amnesty: string | null,
+  mode: Mode,
 ): number {
   return ids.reduce((sum, id) => {
     const s = salaryMap[id];
     if (!s) return sum;
-    if (s.contractYears > 0) {
+    const eff = getEffectiveContract(s, refMap[id], mode);
+    if (eff.contractYears > 0) {
       if (id === amnesty) return sum;
-      if (cut.has(id)) {
-        if (s.contractYears > 1) return sum + Math.ceil(s.salary / s.contractYears);
-        return sum + Math.floor(s.salary / 2);
-      }
-      return sum + s.salary;
+      if (cut.has(id)) return sum + getDeadCapHit(eff.salary, eff.contractYears);
+      return sum + eff.salary;
     }
-    if (resigned.has(id)) return sum + Math.max(1, Math.round((refMap[id] ?? 1) * 0.9));
+    // Offseason only: an expired deal counts once it is re-signed.
+    if (resigned.has(id)) return sum + getResignPrice(refMap[id]);
     return sum;
   }, 0);
 }
@@ -64,9 +74,9 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
 
   const slotLabels = getStarterSlotLabels(rosterPositions);
   const draftCapHit = draftPicks.reduce((sum, p) => sum + p.salary, 0);
-  const totalSalary = sumSalary(allPlayers, salaryMap) + draftCapHit;
+  const totalSalary = sumSalary(allPlayers, salaryMap, refMap, mode) + draftCapHit;
   const deadCapTotal = deadCap?.total ?? 0;
-  const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty) + draftCapHit + deadCapTotal;
+  const committedSalary = sumCommitted(allPlayers, salaryMap, refMap, resigned, cut, amnesty, mode) + draftCapHit + deadCapTotal;
   const irCreditTotal = irCredits?.total ?? 0;
   const effectiveCap = committedSalary - irCreditTotal;
 
@@ -104,13 +114,17 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
       <div className="flex items-end justify-between">
         <TeamHeader user={user} />
         <div className="flex gap-6 pb-4">
-          <div className="text-right">
-            <p className="text-2xl font-bold text-emerald-400">${totalSalary}</p>
-            <p className="text-xs text-gray-500">Total Salary</p>
-          </div>
+          {/* In-season every player is under contract, so Total and Committed
+              would be the same number — only Committed is shown. */}
+          {mode === 'offseason' && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-emerald-400">${totalSalary}</p>
+              <p className="text-xs text-gray-500">Total Salary</p>
+            </div>
+          )}
           <div className="text-right">
             <p className="text-2xl font-bold text-blue-400">${mode === 'inseason' && irCreditTotal > 0 ? effectiveCap : committedSalary}</p>
-            <p className="text-xs text-gray-500">{mode === 'inseason' ? 'Effective Cap' : 'Committed Salary'}</p>
+            <p className="text-xs text-gray-500">{mode === 'inseason' && irCreditTotal > 0 ? 'Effective Cap' : 'Committed Salary'}</p>
           </div>
           {mode === 'inseason' && deadCapTotal > 0 && (
             <div className="text-right">
@@ -139,7 +153,7 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         amnesty={amnesty}
         onToggleAmnesty={toggleAmnesty}
         slotLabels={slotLabels}
-        sectionSalary={sumSalary(starters, salaryMap)}
+        sectionSalary={sumSalary(starters, salaryMap, refMap, mode)}
         mode={mode}
         irCredits={irCredits}
       />
@@ -155,7 +169,7 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         onToggleCut={toggleCut}
         amnesty={amnesty}
         onToggleAmnesty={toggleAmnesty}
-        sectionSalary={sumSalary(bench, salaryMap)}
+        sectionSalary={sumSalary(bench, salaryMap, refMap, mode)}
         mode={mode}
         irCredits={irCredits}
       />
@@ -171,7 +185,7 @@ export function TeamRoster({ team, playerDB, salaryMap, refMap, draftPicks, rost
         onToggleCut={toggleCut}
         amnesty={amnesty}
         onToggleAmnesty={toggleAmnesty}
-        sectionSalary={sumSalary(reserve, salaryMap)}
+        sectionSalary={sumSalary(reserve, salaryMap, refMap, mode)}
         mode={mode}
         irCredits={irCredits}
       />

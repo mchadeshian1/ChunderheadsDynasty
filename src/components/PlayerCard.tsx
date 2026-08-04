@@ -2,6 +2,7 @@ import type { SleeperPlayer } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
 import type { Mode } from './Layout';
 import type { PlayerIRCredit } from '../utils/irCredit';
+import { getEffectiveContract, getResignPrice } from '../utils/contract';
 
 const POSITION_COLORS: Record<string, string> = {
   QB: 'bg-red-500/20 text-red-400',
@@ -47,32 +48,35 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
 
   const posColor = POSITION_COLORS[player.position] ?? 'bg-gray-500/20 text-gray-400';
   const displayRef = refValue ?? 1;
-  const resignPrice = Math.max(1, Math.round(displayRef * 0.9));
-  const isUnderContract = salary != null && salary.contractYears > 0;
+  const resignPrice = getResignPrice(refValue);
+
+  // In-season, an expired deal is already re-signed: discounted price, fresh term.
+  const effective = salary ? getEffectiveContract(salary, refValue, mode) : null;
+  const isUnderContract = effective != null && effective.contractYears > 0;
   const isExpired = salary != null && salary.contractYears === 0;
 
-  const deadCapSpread = (isCut && salary && salary.contractYears > 1) ? (() => {
-    const perYear = Math.floor(salary.salary / salary.contractYears);
-    const remainder = salary.salary % salary.contractYears;
-    return Array.from({ length: salary.contractYears }, (_, i) =>
+  const deadCapSpread = (isCut && effective && effective.contractYears > 1) ? (() => {
+    const perYear = Math.floor(effective.salary / effective.contractYears);
+    const remainder = effective.salary % effective.contractYears;
+    return Array.from({ length: effective.contractYears }, (_, i) =>
       perYear + (i < remainder ? 1 : 0)
     );
   })() : null;
 
-  const salaryDisplay = salary ? (
+  const salaryDisplay = salary && effective ? (
     <span className="flex shrink-0 items-center gap-1">
       {isAmnesty ? (
         <span className="text-sm font-semibold text-orange-400">$0</span>
       ) : isCut ? (
         <span className="text-sm font-semibold text-red-400">
-          ${deadCapSpread ? deadCapSpread[0] : Math.floor(salary.salary / 2)}
+          ${deadCapSpread ? deadCapSpread[0] : Math.floor(effective.salary / 2)}
         </span>
       ) : resigned ? (
         <span className="text-sm font-semibold text-emerald-400">${resignPrice}</span>
       ) : (
-        <span className="text-sm font-semibold text-emerald-400">${salary.salary}</span>
+        <span className="text-sm font-semibold text-emerald-400">${effective.salary}</span>
       )}
-      <span className="text-right text-xs text-gray-500">{salary.contractYears}yr</span>
+      <span className="text-right text-xs text-gray-500">{effective.contractYears}yr</span>
     </span>
   ) : (
     <span className="shrink-0 rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs font-semibold text-yellow-400">
