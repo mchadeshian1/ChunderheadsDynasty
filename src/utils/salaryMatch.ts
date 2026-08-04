@@ -132,6 +132,7 @@ export function matchSalaries(
         name: entry.name,
         contractYears: entry.contractYears,
         salary: entry.salary,
+        refValue: entry.refValue,
       };
     } else {
       unmatched.push(entry);

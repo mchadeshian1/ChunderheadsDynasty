@@ -2,6 +2,7 @@ export interface SalaryEntry {
   name: string;
   contractYears: number;
   salary: number;
+  refValue?: number;
 }
 
 export interface PlayerSalary {
@@ -9,4 +10,5 @@ export interface PlayerSalary {
   name: string;
   contractYears: number;
   salary: number;
+  refValue?: number;
 }

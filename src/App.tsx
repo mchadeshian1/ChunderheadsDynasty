@@ -36,10 +36,16 @@ function App() {
     return matchSalaries(salaryEntries, playerDB);
   }, [playerDB]);
 
+  // player_contracts.csv is the source of truth for reference values. buildRefMap
+  // only fills in players absent from that table, e.g. in-season waiver pickups.
   const refMap = useMemo(() => {
     if (!playerDB) return {};
-    return buildRefMap(playerDB);
-  }, [playerDB]);
+    const map = buildRefMap(playerDB);
+    for (const entry of Object.values(salaryMap)) {
+      if (entry.refValue !== undefined) map[entry.playerId] = entry.refValue;
+    }
+    return map;
+  }, [playerDB, salaryMap]);
 
   const waiverOverrides = useMemo(() => {
     if (!transactions.length || !teams.length) return {};
