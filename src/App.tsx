@@ -76,10 +76,12 @@ function App() {
     return computeIRCredits(effectiveSalaryMap, seasonStarted);
   }, [mode, effectiveSalaryMap, seasonStarted]);
 
+  // Uses the effective map, not the raw sheet, so cutting a drafted rookie or an
+  // auction signing carries dead cap on the contract he actually holds.
   const preSeasonDeadCap = useMemo(() => {
     if (mode !== 'inseason' || !transactions.length || !teams.length) return {};
-    return getPreSeasonDeadCap(transactions, teams.map(t => t.roster), salaryMap);
-  }, [mode, transactions, teams, salaryMap]);
+    return getPreSeasonDeadCap(transactions, teams.map(t => t.roster), effectiveSalaryMap);
+  }, [mode, transactions, teams, effectiveSalaryMap]);
 
   const activeSalaryMap = effectiveSalaryMap;
 
