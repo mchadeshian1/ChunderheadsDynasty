@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SleeperLeague, EnrichedTeam, DraftPick } from '../types/sleeper';
-import { fetchLeague, fetchUsers, fetchRosters, fetchTradedPicks, fetchDrafts } from '../api/sleeper';
+import type { SleeperLeague, EnrichedTeam, DraftPick, SleeperNFLState } from '../types/sleeper';
+import { fetchLeague, fetchUsers, fetchRosters, fetchTradedPicks, fetchDrafts, fetchNFLState } from '../api/sleeper';
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 
@@ -16,6 +16,7 @@ function pickSalary(round: number, pickInRound: number): number {
 
 export function useLeagueData() {
   const [league, setLeague] = useState<SleeperLeague | null>(null);
+  const [nflState, setNflState] = useState<SleeperNFLState | null>(null);
   const [teams, setTeams] = useState<EnrichedTeam[]>([]);
   const [draftPicksByRoster, setDraftPicksByRoster] = useState<Record<number, DraftPick[]>>({});
   const [loading, setLoading] = useState(true);
@@ -25,12 +26,13 @@ export function useLeagueData() {
 
   const load = useCallback(async (signal: AbortSignal) => {
     try {
-      const [leagueData, users, rosters, tradedPicks, drafts] = await Promise.all([
+      const [leagueData, users, rosters, tradedPicks, drafts, state] = await Promise.all([
         fetchLeague(),
         fetchUsers(),
         fetchRosters(),
         fetchTradedPicks(),
         fetchDrafts(),
+        fetchNFLState(),
       ]);
       if (signal.aborted) return;
 
@@ -84,6 +86,7 @@ export function useLeagueData() {
       }
 
       setLeague(leagueData);
+      setNflState(state);
       setTeams(enriched);
       setDraftPicksByRoster(picksByRoster);
       setLastUpdated(new Date());
@@ -107,5 +110,9 @@ export function useLeagueData() {
     };
   }, [load]);
 
-  return { league, teams, draftPicksByRoster, lastUpdated, loading, error };
+  // Games are actually being played, as opposed to the preseason. The league's
+  // own settings.leg reads 1 year-round and cannot answer this.
+  const seasonStarted = nflState?.season_type === 'regular';
+
+  return { league, nflState, seasonStarted, teams, draftPicksByRoster, lastUpdated, loading, error };
 }

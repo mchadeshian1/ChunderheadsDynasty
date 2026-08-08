@@ -25,7 +25,7 @@ function App() {
   const [showMissing, setShowMissing] = useState(false);
   const [mode, setMode] = useState<Mode>('offseason');
   const toggleMode = useCallback(() => setMode(m => m === 'offseason' ? 'inseason' : 'offseason'), []);
-  const { league, teams, draftPicksByRoster, lastUpdated, loading: leagueLoading, error: leagueError } = useLeagueData();
+  const { league, seasonStarted, teams, draftPicksByRoster, lastUpdated, loading: leagueLoading, error: leagueError } = useLeagueData();
   const { playerDB, loading: playersLoading, error: playersError } = usePlayerDB();
 
   const currentWeek = league?.settings?.leg ?? 0;
@@ -57,10 +57,12 @@ function App() {
     return { ...salaryMap, ...waiverOverrides };
   }, [salaryMap, waiverOverrides]);
 
+  // Weeks on IR come from the recorded ledger, not live roster state, so credit
+  // survives a player being activated. See utils/irCredit.ts.
   const irCredits = useMemo(() => {
-    if (mode !== 'inseason' || !teams.length || !playerDB || !currentWeek) return {};
-    return computeIRCredits(transactions, teams.map(t => t.roster), playerDB, effectiveSalaryMap, currentWeek);
-  }, [mode, transactions, teams, playerDB, effectiveSalaryMap, currentWeek]);
+    if (mode !== 'inseason') return {};
+    return computeIRCredits(effectiveSalaryMap, seasonStarted);
+  }, [mode, effectiveSalaryMap, seasonStarted]);
 
   const preSeasonDeadCap = useMemo(() => {
     if (mode !== 'inseason' || !transactions.length || !teams.length) return {};

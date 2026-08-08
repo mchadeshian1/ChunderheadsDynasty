@@ -83,3 +83,14 @@ export interface EnrichedTeam {
   roster: SleeperRoster;
   user: SleeperUser;
 }
+
+export interface SleeperNFLState {
+  /** "pre" | "regular" | "post" */
+  season_type: string;
+  season: string;
+  /** Week within the current season_type; 0 during the preseason. */
+  leg: number;
+  week: number;
+  display_week: number;
+  season_start_date: string;
+}

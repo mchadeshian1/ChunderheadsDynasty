@@ -1,0 +1,38 @@
+name: Snapshot IR
+
+# Sleeper never reports when a player was placed on IR, so the only way to know
+# how long he sat there is to look every day while it is happening. Missing a run
+# costs at most a day of resolution, and re-running is harmless.
+on:
+  schedule:
+    - cron: '0 12 * * *' # 12:00 UTC daily
+  workflow_dispatch: # allow a manual run
+
+permissions:
+  contents: write
+
+# Never let two runs commit at once.
+concurrency:
+  group: ir-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/snapshot-ir.mjs
+      - name: Commit the ledger if it changed
+        run: |
+          if [ -z "$(git status --porcelain src/data/irLedger.json)" ]; then
+            echo "No change to record."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/irLedger.json
+          git commit -m "Record IR snapshot for $(date -u +%Y-%m-%d)"
+          git push

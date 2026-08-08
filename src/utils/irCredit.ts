@@ -1,6 +1,5 @@
-import type { SleeperTransaction } from '../types/transaction';
-import type { SleeperRoster, SleeperPlayer } from '../types/sleeper';
 import type { PlayerSalary } from '../types/salary';
+import irLedger from '../data/irLedger.json';
 
 export interface PlayerIRCredit {
   playerId: string;
@@ -13,60 +12,82 @@ export interface TeamIRCredits {
   players: PlayerIRCredit[];
 }
 
-function findIRPlacementWeek(
-  playerId: string,
-  rosterId: number,
-  transactions: SleeperTransaction[],
-): number | null {
-  let earliestWeek: number | null = null;
+/** week -> rosterId -> player ids on IR that week */
+interface IRLedger {
+  updated: string | null;
+  weeks: Record<string, Record<string, string[]>>;
+}
 
-  for (const txn of transactions) {
-    if (txn.adds && txn.adds[playerId] === rosterId) {
-      if (earliestWeek === null || txn.leg < earliestWeek) {
-        earliestWeek = txn.leg;
+/** A full season of relief is one full salary, so each week is worth 1/17th. */
+const SEASON_WEEKS = 17;
+
+/**
+ * Landing on IR pays the first four weeks immediately, rather than a week at a
+ * time. Past week four the credit accrues normally for as long as the player
+ * stays on IR, so a short stint is still worth the full four weeks.
+ */
+const MINIMUM_WEEKS = 4;
+
+/**
+ * Weeks each player spent on IR, per roster.
+ *
+ * Sleeper cannot answer this: placing a player on IR is a roster-settings change
+ * rather than a transaction, so it never appears in the transactions feed, and
+ * once a player is activated there is nothing left to read. The ledger is written
+ * by scripts/snapshot-ir.mjs on a daily schedule; see that file for details.
+ *
+ * Counting from the ledger rather than from live roster state means credit
+ * survives activation, resumes correctly if a player is hurt again, and stays
+ * with the roster that carried him rather than following him in a trade.
+ */
+function weeksOnIRByRoster(): Record<number, Record<string, number>> {
+  const ledger = irLedger as IRLedger;
+  const weeks: Record<number, Record<string, number>> = {};
+
+  for (const rostersInWeek of Object.values(ledger.weeks)) {
+    for (const [rosterId, playerIds] of Object.entries(rostersInWeek)) {
+      const rid = Number(rosterId);
+      const forRoster = (weeks[rid] ??= {});
+      for (const playerId of playerIds) {
+        forRoster[playerId] = (forRoster[playerId] ?? 0) + 1;
       }
     }
   }
 
-  return earliestWeek;
+  return weeks;
 }
 
+/**
+ * IR credit per roster.
+ *
+ * `seasonStarted` gates the whole calculation: nothing is credited until the
+ * regular season is under way, so preseason IR designations are worth nothing.
+ */
 export function computeIRCredits(
-  transactions: SleeperTransaction[],
-  rosters: SleeperRoster[],
-  playerDB: Record<string, SleeperPlayer>,
   salaryMap: Record<string, PlayerSalary>,
-  currentWeek: number,
+  seasonStarted: boolean,
 ): Record<number, TeamIRCredits> {
   const result: Record<number, TeamIRCredits> = {};
+  if (!seasonStarted) return result;
 
-  for (const roster of rosters) {
-    const irPlayers = (roster.reserve ?? []).filter(pid => {
-      const player = playerDB[pid];
-      if (!player) return false;
-      const status = player.injury_status;
-      return status === 'IR' || status === 'PUP';
-    });
-
+  for (const [rosterId, playerWeeks] of Object.entries(weeksOnIRByRoster())) {
     const players: PlayerIRCredit[] = [];
     let total = 0;
 
-    for (const pid of irPlayers) {
-      const salary = salaryMap[pid];
+    for (const [playerId, weeks] of Object.entries(playerWeeks)) {
+      const salary = salaryMap[playerId];
       if (!salary || salary.salary <= 0) continue;
 
-      const placementWeek = findIRPlacementWeek(pid, roster.roster_id, transactions) ?? 1;
-      const weeks = Math.max(0, currentWeek - placementWeek + 1);
-      const credit = Math.floor(weeks * salary.salary / 17);
+      const creditedWeeks = Math.max(MINIMUM_WEEKS, weeks);
+      const credit = Math.floor((creditedWeeks * salary.salary) / SEASON_WEEKS);
+      if (credit <= 0) continue;
 
-      if (credit > 0) {
-        players.push({ playerId: pid, weeks, credit });
-        total += credit;
-      }
+      players.push({ playerId, weeks: creditedWeeks, credit });
+      total += credit;
     }
 
     if (players.length > 0) {
-      result[roster.roster_id] = { total, players };
+      result[Number(rosterId)] = { total, players };
     }
   }
 
