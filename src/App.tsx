@@ -2,10 +2,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { useLeagueData } from './hooks/useLeagueData';
 import { usePlayerDB } from './hooks/usePlayerDB';
 import { useTransactions } from './hooks/useTransactions';
+import { useDraftPicks } from './hooks/useDraftPicks';
 import { parseSalaryCSV } from './data/salaryData';
 import { matchSalaries } from './utils/salaryMatch';
 import { buildRefMap } from './data/referenceValues';
 import { getWaiverOverrides } from './utils/transactions';
+import { getDraftContracts } from './utils/draftContracts';
 import { computeIRCredits } from './utils/irCredit';
 import { getPreSeasonDeadCap } from './utils/deadCap';
 import { Layout } from './components/Layout';
@@ -25,8 +27,9 @@ function App() {
   const [showMissing, setShowMissing] = useState(false);
   const [mode, setMode] = useState<Mode>('offseason');
   const toggleMode = useCallback(() => setMode(m => m === 'offseason' ? 'inseason' : 'offseason'), []);
-  const { league, seasonStarted, teams, draftPicksByRoster, lastUpdated, loading: leagueLoading, error: leagueError } = useLeagueData();
+  const { league, seasonStarted, teams, lastUpdated, loading: leagueLoading, error: leagueError } = useLeagueData();
   const { playerDB, loading: playersLoading, error: playersError } = usePlayerDB();
+  const { drafts, picksByDraft } = useDraftPicks();
 
   const currentWeek = league?.settings?.leg ?? 0;
   const { transactions } = useTransactions(currentWeek);
@@ -52,10 +55,19 @@ function App() {
     return getWaiverOverrides(transactions, teams.map(t => t.roster));
   }, [transactions, teams]);
 
-  const effectiveSalaryMap = useMemo(() => {
-    if (!Object.keys(waiverOverrides).length) return salaryMap;
-    return { ...salaryMap, ...waiverOverrides };
-  }, [salaryMap, waiverOverrides]);
+  // Drafted players are under contract from the moment they are picked: rookies
+  // on a 3-year deal at their pick slot, auction buys on 1 year at the winning bid.
+  const draftContracts = useMemo(() => {
+    if (!drafts.length || !playerDB) return {};
+    return getDraftContracts(drafts, picksByDraft, playerDB);
+  }, [drafts, picksByDraft, playerDB]);
+
+  // A later transaction wins over the draft, so a player who was drafted and then
+  // dropped and re-added carries his waiver terms rather than his draft terms.
+  const effectiveSalaryMap = useMemo(
+    () => ({ ...salaryMap, ...draftContracts, ...waiverOverrides }),
+    [salaryMap, draftContracts, waiverOverrides],
+  );
 
   // Weeks on IR come from the recorded ledger, not live roster state, so credit
   // survives a player being activated. See utils/irCredit.ts.
@@ -96,7 +108,6 @@ function App() {
               playerDB={playerDB}
               salaryMap={activeSalaryMap}
               refMap={refMap}
-              draftPicks={draftPicksByRoster[teams[selectedIndex].roster.roster_id] ?? []}
               rosterPositions={league.roster_positions}
               mode={mode}
               irCredits={irCredits[teams[selectedIndex].roster.roster_id]}

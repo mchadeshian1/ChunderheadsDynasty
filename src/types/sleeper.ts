@@ -67,16 +67,30 @@ export interface SleeperTradedPick {
 export interface SleeperDraft {
   draft_id: string;
   season: string;
+  /** "auction" for the free agent draft, "linear"/"snake" for the rookie draft. */
+  type: string;
   status: string;
   draft_order: Record<string, number> | null;
   settings: Record<string, number>;
 }
 
-export interface DraftPick {
+export interface SleeperDraftPick {
+  draft_id: string;
+  player_id: string;
+  roster_id: number;
   round: number;
-  pickInRound: number;
-  originalRosterId: number;
-  salary: number;
+  /** Position within the round, 1..teams. */
+  draft_slot: number;
+  /** Overall pick number across the whole draft. */
+  pick_no: number;
+  metadata: {
+    first_name?: string;
+    last_name?: string;
+    position?: string;
+    /** Winning bid, auction drafts only. Sleeper sends it as a string. */
+    amount?: string;
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface EnrichedTeam {
