@@ -72,6 +72,10 @@ export interface SleeperDraft {
   status: string;
   draft_order: Record<string, number> | null;
   settings: Record<string, number>;
+  /** Epoch ms. */
+  start_time: number | null;
+  /** Epoch ms of the final pick. */
+  last_picked: number | null;
 }
 
 export interface SleeperDraftPick {

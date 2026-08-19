@@ -38,6 +38,48 @@ function playerName(pick: SleeperDraftPick, playerDB: Record<string, SleeperPlay
  * Salaries are locked for this season only. Next year these become the prior-year
  * figure and re-price through the usual blend like any other contract.
  */
+/** A contract taking effect at a point in time, used to price a cut correctly. */
+export interface ContractEvent {
+  playerId: string;
+  /** Epoch ms at which these terms took effect. */
+  at: number;
+  salary: number;
+  contractYears: number;
+}
+
+/**
+ * Draft contracts stamped with when the draft finished.
+ *
+ * Dead cap has to be priced against the contract a player held on the day he was
+ * cut, so a deal signed after that cut must not be allowed to reach back and
+ * change it.
+ */
+export function getDraftContractEvents(
+  drafts: SleeperDraft[],
+  picksByDraft: Record<string, SleeperDraftPick[]>,
+  playerDB: Record<string, SleeperPlayer>,
+): ContractEvent[] {
+  const events: ContractEvent[] = [];
+
+  for (const draft of drafts) {
+    if (draft.status !== 'complete') continue;
+    const at = draft.last_picked ?? draft.start_time;
+    if (at == null) continue;
+
+    const contracts = getDraftContracts([draft], picksByDraft, playerDB);
+    for (const contract of Object.values(contracts)) {
+      events.push({
+        playerId: contract.playerId,
+        at,
+        salary: contract.salary,
+        contractYears: contract.contractYears,
+      });
+    }
+  }
+
+  return events;
+}
+
 export function getDraftContracts(
   drafts: SleeperDraft[],
   picksByDraft: Record<string, SleeperDraftPick[]>,

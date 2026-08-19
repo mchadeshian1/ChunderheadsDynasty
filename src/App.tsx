@@ -7,7 +7,7 @@ import { parseSalaryCSV } from './data/salaryData';
 import { matchSalaries } from './utils/salaryMatch';
 import { buildRefMap } from './data/referenceValues';
 import { getWaiverOverrides } from './utils/transactions';
-import { getDraftContracts } from './utils/draftContracts';
+import { getDraftContracts, getDraftContractEvents } from './utils/draftContracts';
 import { computeIRCredits } from './utils/irCredit';
 import { getPreSeasonDeadCap } from './utils/deadCap';
 import { Layout } from './components/Layout';
@@ -76,12 +76,17 @@ function App() {
     return computeIRCredits(effectiveSalaryMap, seasonStarted);
   }, [mode, effectiveSalaryMap, seasonStarted]);
 
-  // Uses the effective map, not the raw sheet, so cutting a drafted rookie or an
-  // auction signing carries dead cap on the contract he actually holds.
+  const draftEvents = useMemo(() => {
+    if (!drafts.length || !playerDB) return [];
+    return getDraftContractEvents(drafts, picksByDraft, playerDB);
+  }, [drafts, picksByDraft, playerDB]);
+
+  // Priced from the sheet plus only those contracts that existed by the time of
+  // each cut, so a later signing cannot change what an earlier cut cost.
   const preSeasonDeadCap = useMemo(() => {
     if (mode !== 'inseason' || !transactions.length || !teams.length) return {};
-    return getPreSeasonDeadCap(transactions, teams.map(t => t.roster), effectiveSalaryMap);
-  }, [mode, transactions, teams, effectiveSalaryMap]);
+    return getPreSeasonDeadCap(transactions, teams.map(t => t.roster), salaryMap, draftEvents);
+  }, [mode, transactions, teams, salaryMap, draftEvents]);
 
   const activeSalaryMap = effectiveSalaryMap;
 
