@@ -7,9 +7,9 @@ import { parseSalaryCSV } from './data/salaryData';
 import { matchSalaries } from './utils/salaryMatch';
 import { buildRefMap } from './data/referenceValues';
 import { getWaiverOverrides } from './utils/transactions';
-import { getDraftContracts, getDraftContractEvents } from './utils/draftContracts';
+import { getDraftContracts, getDraftContractEvents, getSupplementalDraftStart } from './utils/draftContracts';
 import { computeIRCredits } from './utils/irCredit';
-import { getPreSeasonDeadCap } from './utils/deadCap';
+import { getDeadCap } from './utils/deadCap';
 import { Layout } from './components/Layout';
 import type { Mode } from './components/Layout';
 import { TeamTabs } from './components/TeamTabs';
@@ -82,11 +82,13 @@ function App() {
   }, [drafts, picksByDraft, playerDB]);
 
   // Priced from the sheet plus only those contracts that existed by the time of
-  // each cut, so a later signing cannot change what an earlier cut cost.
-  const preSeasonDeadCap = useMemo(() => {
+  // each cut, so a later signing cannot change what an earlier cut cost. The
+  // amnesty only reaches cuts made before the supplemental draft.
+  const deadCapByRoster = useMemo(() => {
     if (mode !== 'inseason' || !transactions.length || !teams.length) return {};
-    return getPreSeasonDeadCap(transactions, teams.map(t => t.roster), salaryMap, draftEvents);
-  }, [mode, transactions, teams, salaryMap, draftEvents]);
+    const amnestyDeadline = getSupplementalDraftStart(drafts);
+    return getDeadCap(transactions, teams.map(t => t.roster), salaryMap, draftEvents, amnestyDeadline);
+  }, [mode, transactions, teams, salaryMap, draftEvents, drafts]);
 
   const activeSalaryMap = effectiveSalaryMap;
 
@@ -118,7 +120,7 @@ function App() {
               rosterPositions={league.roster_positions}
               mode={mode}
               irCredits={irCredits[teams[selectedIndex].roster.roster_id]}
-              deadCap={preSeasonDeadCap[teams[selectedIndex].roster.roster_id]}
+              deadCap={deadCapByRoster[teams[selectedIndex].roster.roster_id]}
             />
           </div>
           {hasMissingSalaries && (

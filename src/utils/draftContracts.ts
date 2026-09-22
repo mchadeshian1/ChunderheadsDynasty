@@ -122,3 +122,14 @@ export function getDraftContracts(
 
   return contracts;
 }
+
+/**
+ * When the supplemental (auction) draft opened, in epoch ms.
+ *
+ * The amnesty covers cuts made to clear room ahead of the auction, so this is
+ * the deadline a cut must beat to qualify. Undefined until the draft is known.
+ */
+export function getSupplementalDraftStart(drafts: SleeperDraft[]): number | undefined {
+  const auction = drafts.find(d => d.type === 'auction');
+  return auction?.start_time ?? undefined;
+}
