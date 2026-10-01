@@ -11,7 +11,10 @@
  *
  * Keys are Sleeper player IDs; values are names for readability only.
  */
-export const SEASON_ENDING_INJURIES: Record<string, string> = {};
+export const SEASON_ENDING_INJURIES: Record<string, string> = {
+  '9226': "De'Von Achane",
+  '12508': 'Jaxson Dart',
+};
 
 export function isOutForSeason(playerId: string): boolean {
   return playerId in SEASON_ENDING_INJURIES;

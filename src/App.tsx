@@ -73,8 +73,8 @@ function App() {
   // survives a player being activated. See utils/irCredit.ts.
   const irCredits = useMemo(() => {
     if (mode !== 'inseason') return {};
-    return computeIRCredits(effectiveSalaryMap, seasonStarted);
-  }, [mode, effectiveSalaryMap, seasonStarted]);
+    return computeIRCredits(effectiveSalaryMap, refMap, seasonStarted);
+  }, [mode, effectiveSalaryMap, refMap, seasonStarted]);
 
   const draftEvents = useMemo(() => {
     if (!drafts.length || !playerDB) return [];

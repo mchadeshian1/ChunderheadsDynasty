@@ -1,6 +1,7 @@
 import type { PlayerSalary } from '../types/salary';
 import irLedger from '../data/irLedger.json';
 import { isOutForSeason } from '../data/seasonEndingInjuries';
+import { getEffectiveContract } from './contract';
 
 export interface PlayerIRCredit {
   playerId: string;
@@ -78,9 +79,13 @@ function stintsOnIRByRoster(): Record<number, Record<string, IRStint>> {
  *
  * A player listed as out for the season is credited for every week from his
  * first week on IR through week 17, whether or not those weeks have happened yet.
+ *
+ * Credit is figured on the salary actually being paid, so an expired deal that
+ * was auto re-signed in-season is credited at its re-sign price.
  */
 export function computeIRCredits(
   salaryMap: Record<string, PlayerSalary>,
+  refMap: Record<string, number>,
   seasonStarted: boolean,
 ): Record<number, TeamIRCredits> {
   const result: Record<number, TeamIRCredits> = {};
@@ -91,13 +96,15 @@ export function computeIRCredits(
     let total = 0;
 
     for (const [playerId, { weeks, firstWeek }] of Object.entries(playerStints)) {
-      const salary = salaryMap[playerId];
-      if (!salary || salary.salary <= 0) continue;
+      const contract = salaryMap[playerId];
+      if (!contract) continue;
+      const salary = getEffectiveContract(contract, refMap[playerId], 'inseason').salary;
+      if (salary <= 0) continue;
 
       const outForSeason = isOutForSeason(playerId);
       const weeksMissed = outForSeason ? SEASON_WEEKS - firstWeek + 1 : weeks;
       const creditedWeeks = Math.min(SEASON_WEEKS, Math.max(MINIMUM_WEEKS, weeks, weeksMissed));
-      const credit = Math.floor((creditedWeeks * salary.salary) / SEASON_WEEKS);
+      const credit = Math.floor((creditedWeeks * salary) / SEASON_WEEKS);
       if (credit <= 0) continue;
 
       players.push({ playerId, weeks: creditedWeeks, credit, outForSeason });
