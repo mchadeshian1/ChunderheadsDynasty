@@ -25,7 +25,7 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
-  const [mode, setMode] = useState<Mode>('offseason');
+  const [mode, setMode] = useState<Mode>('inseason');
   const toggleMode = useCallback(() => setMode(m => m === 'offseason' ? 'inseason' : 'offseason'), []);
   const { league, seasonStarted, teams, lastUpdated, loading: leagueLoading, error: leagueError } = useLeagueData();
   const { playerDB, loading: playersLoading, error: playersError } = usePlayerDB();
