@@ -1,10 +1,13 @@
 import type { PlayerSalary } from '../types/salary';
 import irLedger from '../data/irLedger.json';
+import { isOutForSeason } from '../data/seasonEndingInjuries';
 
 export interface PlayerIRCredit {
   playerId: string;
   weeks: number;
   credit: number;
+  /** Credited through the end of the season; see data/seasonEndingInjuries.ts. */
+  outForSeason: boolean;
 }
 
 export interface TeamIRCredits {
@@ -28,8 +31,15 @@ const SEASON_WEEKS = 17;
  */
 const MINIMUM_WEEKS = 4;
 
+interface IRStint {
+  /** Weeks recorded on IR. */
+  weeks: number;
+  /** Earliest week recorded on IR. */
+  firstWeek: number;
+}
+
 /**
- * Weeks each player spent on IR, per roster.
+ * Weeks each player spent on IR, and the first of them, per roster.
  *
  * Sleeper cannot answer this: placing a player on IR is a roster-settings change
  * rather than a transaction, so it never appears in the transactions feed, and
@@ -40,21 +50,24 @@ const MINIMUM_WEEKS = 4;
  * survives activation, resumes correctly if a player is hurt again, and stays
  * with the roster that carried him rather than following him in a trade.
  */
-function weeksOnIRByRoster(): Record<number, Record<string, number>> {
+function stintsOnIRByRoster(): Record<number, Record<string, IRStint>> {
   const ledger = irLedger as IRLedger;
-  const weeks: Record<number, Record<string, number>> = {};
+  const stints: Record<number, Record<string, IRStint>> = {};
 
-  for (const rostersInWeek of Object.values(ledger.weeks)) {
+  for (const [weekKey, rostersInWeek] of Object.entries(ledger.weeks)) {
+    const week = Number(weekKey);
     for (const [rosterId, playerIds] of Object.entries(rostersInWeek)) {
       const rid = Number(rosterId);
-      const forRoster = (weeks[rid] ??= {});
+      const forRoster = (stints[rid] ??= {});
       for (const playerId of playerIds) {
-        forRoster[playerId] = (forRoster[playerId] ?? 0) + 1;
+        const stint = (forRoster[playerId] ??= { weeks: 0, firstWeek: week });
+        stint.weeks += 1;
+        stint.firstWeek = Math.min(stint.firstWeek, week);
       }
     }
   }
 
-  return weeks;
+  return stints;
 }
 
 /**
@@ -62,6 +75,9 @@ function weeksOnIRByRoster(): Record<number, Record<string, number>> {
  *
  * `seasonStarted` gates the whole calculation: nothing is credited until the
  * regular season is under way, so preseason IR designations are worth nothing.
+ *
+ * A player listed as out for the season is credited for every week from his
+ * first week on IR through week 17, whether or not those weeks have happened yet.
  */
 export function computeIRCredits(
   salaryMap: Record<string, PlayerSalary>,
@@ -70,19 +86,21 @@ export function computeIRCredits(
   const result: Record<number, TeamIRCredits> = {};
   if (!seasonStarted) return result;
 
-  for (const [rosterId, playerWeeks] of Object.entries(weeksOnIRByRoster())) {
+  for (const [rosterId, playerStints] of Object.entries(stintsOnIRByRoster())) {
     const players: PlayerIRCredit[] = [];
     let total = 0;
 
-    for (const [playerId, weeks] of Object.entries(playerWeeks)) {
+    for (const [playerId, { weeks, firstWeek }] of Object.entries(playerStints)) {
       const salary = salaryMap[playerId];
       if (!salary || salary.salary <= 0) continue;
 
-      const creditedWeeks = Math.max(MINIMUM_WEEKS, weeks);
+      const outForSeason = isOutForSeason(playerId);
+      const weeksMissed = outForSeason ? SEASON_WEEKS - firstWeek + 1 : weeks;
+      const creditedWeeks = Math.min(SEASON_WEEKS, Math.max(MINIMUM_WEEKS, weeks, weeksMissed));
       const credit = Math.floor((creditedWeeks * salary.salary) / SEASON_WEEKS);
       if (credit <= 0) continue;
 
-      players.push({ playerId, weeks: creditedWeeks, credit });
+      players.push({ playerId, weeks: creditedWeeks, credit, outForSeason });
       total += credit;
     }
 

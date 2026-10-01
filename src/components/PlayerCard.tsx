@@ -123,7 +123,7 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
 
   const irCreditDisplay = irCredit && mode === 'inseason' ? (
     <span className="text-xs font-semibold text-cyan-400">
-      IR: -${irCredit.credit} ({irCredit.weeks}wk)
+      IR: -${irCredit.credit} ({irCredit.weeks}wk{irCredit.outForSeason ? ', season' : ''})
     </span>
   ) : null;
 
@@ -149,7 +149,7 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
           ref ${displayRef}
         </span>
         <span className="w-20 shrink-0 flex justify-end">{salaryDisplay}</span>
-        {irCreditDisplay && <span className="w-28 shrink-0 flex justify-end">{irCreditDisplay}</span>}
+        {irCreditDisplay && <span className="w-40 shrink-0 flex justify-end">{irCreditDisplay}</span>}
         <span className="w-40 shrink-0 flex justify-end">{checkboxes}</span>
       </div>
       {/* Desktop: future dead cap */}
