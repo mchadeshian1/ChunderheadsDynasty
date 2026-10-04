@@ -1,6 +1,10 @@
 /**
  * Records which players are on IR, one snapshot per run.
  *
+ * "On IR" means the player's Sleeper injury status is IR or PUP, wherever he
+ * sits on the roster. Each team has only two IR slots, so a team with more
+ * players hurt than that still earns credit for the ones left on the bench.
+ *
  * Sleeper does not report when a player was placed on IR: moving a player to the
  * reserve slot is a roster-settings change, not a transaction, so it never shows
  * up in the transactions feed. The only way to know how long someone sat on IR is
@@ -59,7 +63,8 @@ async function main() {
 
   let recorded = 0;
   for (const roster of rosters) {
-    const onIR = (roster.reserve ?? []).filter(pid => {
+    const rostered = new Set([...(roster.players ?? []), ...(roster.reserve ?? [])]);
+    const onIR = [...rostered].filter(pid => {
       const player = playerDB[pid];
       return player && CREDITED_STATUSES.has(player.injury_status);
     });
