@@ -14,6 +14,8 @@
 export const SEASON_ENDING_INJURIES: Record<string, string> = {
   '9226': "De'Von Achane",
   '12508': 'Jaxson Dart',
+  '10222': 'Jayden Reed',
+  '12484': 'Jayden Higgins',
 };
 
 export function isOutForSeason(playerId: string): boolean {
