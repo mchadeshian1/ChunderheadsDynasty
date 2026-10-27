@@ -74,11 +74,15 @@ const NAME_OVERRIDES: Record<string, string> = {
   "Bam Knight": "Zonovan Knight",
 };
 
+// Suffixes are dropped because Sleeper adds and removes them over time (e.g.
+// "Travis Etienne" became "Travis Etienne Jr."), and the sheet rarely has them.
 function normalize(name: string): string {
   return name
     .toLowerCase()
     .replace(/[''`.]/g, '')
     .replace(/[-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
