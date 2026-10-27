@@ -127,6 +127,20 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
     </span>
   ) : null;
 
+  // Desktop splits the credit into fixed-width cells so amounts, weeks and the
+  // season tag line up down the roster.
+  const irCreditColumns = irCredit ? (
+    <>
+      <span className="w-10 text-right font-semibold text-cyan-400">-${irCredit.credit}</span>
+      <span className="w-10 text-right text-cyan-400/80">{irCredit.weeks}wk</span>
+      <span className="w-14 text-left">
+        {irCredit.outForSeason && (
+          <span className="rounded bg-cyan-500/15 px-1 py-0.5 text-[10px] font-semibold uppercase text-cyan-300">season</span>
+        )}
+      </span>
+    </>
+  ) : null;
+
   return (
     <div className="rounded-lg bg-gray-800/50 px-3 py-2">
       {/* Desktop: single row */}
@@ -149,7 +163,10 @@ export function PlayerCard({ playerId, playerDB, salaryMap, refValue, resigned, 
           ref ${displayRef}
         </span>
         <span className="w-20 shrink-0 flex justify-end">{salaryDisplay}</span>
-        {irCreditDisplay && <span className="w-40 shrink-0 flex justify-end">{irCreditDisplay}</span>}
+        {/* Every in-season row reserves the IR column so the columns before it stay aligned. */}
+        {mode === 'inseason' && (
+          <span className="flex w-36 shrink-0 items-center justify-end gap-1.5 text-xs">{irCreditColumns}</span>
+        )}
         <span className="w-40 shrink-0 flex justify-end">{checkboxes}</span>
       </div>
       {/* Desktop: future dead cap */}
