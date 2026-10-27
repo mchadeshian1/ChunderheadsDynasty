@@ -45,7 +45,7 @@ interface IRStint {
  * Sleeper cannot answer this: placing a player on IR is a roster-settings change
  * rather than a transaction, so it never appears in the transactions feed, and
  * once a player is activated there is nothing left to read. The ledger is written
- * by scripts/snapshot-ir.mjs on a daily schedule; see that file for details.
+ * by scripts/snapshot-ir.mjs each Sunday; see that file for details.
  *
  * Counting from the ledger rather than from live roster state means credit
  * survives activation, resumes correctly if a player is hurt again, and stays

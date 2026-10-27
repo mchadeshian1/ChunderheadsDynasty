@@ -10,9 +10,15 @@
  * up in the transactions feed. The only way to know how long someone sat on IR is
  * to observe it while it is happening, which is what this script is for.
  *
+ * A week counts only if the player is on IR on that week's Sunday, the main game
+ * day. Sleeper rolls over to the next week on Tuesday, so a player activated
+ * midweek would otherwise be credited for a week he went on to play. Runs on
+ * any other day record nothing.
+ *
  * The ledger is keyed week -> rosterId -> playerIds, so a player's time on IR is
  * simply the number of weeks he appears under that roster. Re-recording the same
- * week is a no-op, which makes the script safe to run as often as you like.
+ * week is a no-op, which makes the script safe to run as often as you like on a
+ * Sunday.
  * Because it is keyed by roster, credit does not follow a traded player.
  *
  * Run locally with:  node scripts/snapshot-ir.mjs
@@ -33,7 +39,18 @@ async function getJSON(url) {
   return res.json();
 }
 
+/** Weekday in US Eastern time, where NFL game days are defined. */
+function easternWeekday(date) {
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'long' }).format(date);
+}
+
 async function main() {
+  const weekday = easternWeekday(new Date());
+  if (weekday !== 'Sunday') {
+    console.log(`It is ${weekday} in New York; IR is only recorded on Sundays.`);
+    return;
+  }
+
   // The league's own settings.leg reads 1 even in the preseason, so the NFL
   // state endpoint is what tells us whether games have actually started.
   const state = await getJSON('https://api.sleeper.app/v1/state/nfl');
