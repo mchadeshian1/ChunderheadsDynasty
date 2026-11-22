@@ -18,6 +18,7 @@ export const SEASON_ENDING_INJURIES: Record<string, string> = {
   '12484': 'Jayden Higgins',
   '8698': 'Jake Tonges',
   '6826': 'Cole Kmet',
+  '9493': 'Puka Nacua',
 };
 
 export function isOutForSeason(playerId: string): boolean {
