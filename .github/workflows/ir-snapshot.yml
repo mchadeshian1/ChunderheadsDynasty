@@ -2,12 +2,16 @@ name: Snapshot IR
 
 # Sleeper never reports when a player was placed on IR, so the only way to know
 # how long he sat there is to look while it is happening. A week counts only if
-# he is on IR that Sunday, so the job runs three times on Sundays: scheduled runs
-# can start hours late or be skipped, and re-running is harmless. All three land
-# on Sunday in New York even when delayed.
+# he is on IR that Sunday, so the job runs repeatedly on Sundays: scheduled runs
+# can start hours late or be dropped entirely, and re-running is harmless. In
+# practice roughly a third of them never fire, so the extra attempts are what
+# keep a week from being lost. All of them land on Sunday in New York even when
+# delayed by a few hours.
+#
+# A Sunday with no run at all is caught the next day by ir-audit.yml.
 on:
   schedule:
-    - cron: '0 13,17,21 * * 0' # Sundays, 13:00/17:00/21:00 UTC
+    - cron: '0 13,16,19,22 * * 0' # Sundays, every three hours, 13:00-22:00 UTC
   workflow_dispatch: # allow a manual run
 
 permissions:

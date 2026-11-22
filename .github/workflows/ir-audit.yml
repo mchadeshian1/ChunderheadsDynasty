@@ -1,0 +1,24 @@
+name: Audit IR ledger
+
+# The snapshot job cannot report its own absence: GitHub drops scheduled runs
+# without warning, and a Sunday that goes unrecorded cannot be reconstructed
+# afterwards. This checks on Monday that Sunday left a mark, and fails if it did
+# not, which is the only signal that anything went wrong.
+#
+# Sleeper does not roll the week over until Tuesday, so Monday still reports the
+# week whose Sunday has just been played, and a miss caught here can still be
+# recorded by dispatching Snapshot IR by hand.
+on:
+  schedule:
+    - cron: '0 18 * * 1' # Mondays, 18:00 UTC (13:00 New York)
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/audit-ir.mjs
